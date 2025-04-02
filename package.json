@@ -1,0 +1,90 @@
+{
+  "name": "approval-process-designer",
+  "version": "0.0.1",
+  "description": "approval-process-designer",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "dumi dev",
+    "build": "father build",
+    "build:watch": "father dev",
+    "docs:build": "dumi build",
+    "docs:preview": "dumi preview",
+    "prepare": "husky install && dumi setup",
+    "doctor": "father doctor",
+    "lint": "npm run lint:es && npm run lint:css",
+    "lint:css": "stylelint \"{src,test}/**/*.{css,less}\"",
+    "lint:es": "eslint \"{src,test}/**/*.{js,jsx,ts,tsx}\"",
+    "prepublishOnly": "father doctor && npm run build"
+  },
+  "authors": [
+    "Cooooooler<3422056558@qq.com>"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "*.{md,json}": [
+      "prettier --write --no-error-on-unmatched-pattern"
+    ],
+    "*.{css,less}": [
+      "stylelint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --parser=typescript --write"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=16.9.0",
+    "react-dom": ">=16.9.0"
+  },
+  "devDependencies": {
+    "antd": "^5.24.1",
+    "antd-style": "^3.7.1",
+    "classnames": "^2.5.1",
+    "form-render": "^2.5.2",
+    "@types/chance": "^1.1.6",
+    "@types/lodash": "^4.17.13",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@formily/react": "^2.3.0",
+    "@formily/reactive": "^2.3.0",
+    "ahooks": "^3.7.8",
+    "chance": "^1.1.12",
+    "dayjs": "^1.11.10",
+    "lodash": "^4.17.21",
+    "rc-tooltip": "^6.1.2",
+    "@commitlint/cli": "^17.1.2",
+    "@commitlint/config-conventional": "^17.1.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@umijs/lint": "^4.0.0",
+    "dumi": "^2.4.13",
+    "eslint": "^8.23.0",
+    "father": "^4.1.0",
+    "husky": "^8.0.1",
+    "lint-staged": "^13.0.3",
+    "prettier": "^2.7.1",
+    "prettier-plugin-organize-imports": "^3.0.0",
+    "prettier-plugin-packagejson": "^2.2.18",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "stylelint": "^14.9.1"
+  }
+}
