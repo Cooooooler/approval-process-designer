@@ -15,55 +15,70 @@ export type ProcessNodeType =
   | 'END';
 
 export interface IProcessNode {
-  engine?: ApprovalProcessEngine;
-  isSourceNode?: boolean;
-  id?: string;
+  /**
+   * ApprovalProcessEngine实例
+   */
+  engine: ApprovalProcessEngine;
+  /**
+   * 节点唯一标识
+   */
+  id: string;
   type: ProcessNodeType;
-  componentName?: string;
-  nextNode?: IProcessNode;
-  conditionNodes?: IProcessNode[];
-  title?: string;
-  description?: string;
-  props?: any;
+  componentName: string;
+  /**
+   * 条件节点
+   */
+  conditionNodes: (ProcessNode | undefined)[];
+  title: string;
+  props: any;
+  /**
+   * 默认条件
+   */
   defaultCondition?: boolean;
+  description?: string;
+  nextNode?: IProcessNode;
+  isSourceNode?: boolean;
 }
 
 const ProcessNodes = new Map<string, ProcessNode>();
 
-export class ProcessNode {
-  engine: ApprovalProcessEngine | undefined;
-  isSourceNode: boolean | undefined;
-  id: string;
-  type: ProcessNodeType;
+export class ProcessNode implements IProcessNode {
   componentName: string;
-  prevNodeId?: string;
-  nextNode: ProcessNode | null;
   conditionNodes: (ProcessNode | undefined)[];
-  title: string | undefined;
-  description: string | undefined;
+  engine: ApprovalProcessEngine;
+  id: string;
   props: any;
+  title: string;
+  type: ProcessNodeType;
   defaultCondition?: boolean;
+  description?: string;
+  nextNode?: IProcessNode;
+  isSourceNode?: boolean;
+  /**
+   * 上一个节点的id
+   */
+  prevNodeId?: string;
 
   constructor(node: IProcessNode, parentNode?: ProcessNode) {
-    this.engine = node.engine;
+    this.engine = parentNode?.engine ?? node.engine;
     this.isSourceNode = node.isSourceNode;
     this.id =
-      node.id || `Activity_${chance.string({ length: 10, alpha: true })}`;
+      node.id ?? `Activity_${chance.string({ length: 10, alpha: true })}`;
     this.type = node.type;
-    this.componentName = node.componentName || node.type;
-    this.prevNodeId = parentNode ? parentNode.id : void 0;
-    this.nextNode = null;
+    this.componentName = node.componentName;
+    this.prevNodeId = parentNode?.id;
     this.conditionNodes = [];
     this.title = node.title;
     this.description = node.description;
     this.props = node.props;
-    this.engine = parentNode ? parentNode.engine : void 0;
     this.defaultCondition = node.defaultCondition;
 
+    /**
+     * 在每次添加节点时，将节点保存在全局变量中
+     * Map<string, ProcessNode>
+     */
     ProcessNodes.set(this.id, this);
-    if (node) {
-      this.from(node);
-    }
+    this.from(node);
     this.makeObservable();
   }
 
@@ -125,9 +140,8 @@ export class ProcessNode {
     this.conditionNodes = nodes;
   }
 
-  from(node?: IProcessNode) {
-    if (!node) return;
-    if (node.id && node.id !== this.id) {
+  from(node: IProcessNode) {
+    if (node.id !== this.id) {
       ProcessNodes.delete(this.id);
       ProcessNodes.set(node.id, this);
       this.id = node.id;
@@ -136,10 +150,8 @@ export class ProcessNode {
     this.componentName = node.componentName || node.type;
     this.title = node.title;
     this.description = node.description;
-    this.props = node.props ?? {};
-    if (node.engine) {
-      this.engine = node.engine;
-    }
+    this.props = node.props;
+    this.engine = node.engine;
 
     if (node.nextNode) {
       this.nextNode = new ProcessNode(node.nextNode, this);
