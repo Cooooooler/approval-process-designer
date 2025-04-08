@@ -1,6 +1,6 @@
 import { define, observable } from '@formily/reactive';
 import _ from 'lodash';
-import { GlobalStore } from '../store';
+import {getAddableActivityResources} from 'approval-process-designer';
 import { DesignerCore } from '../util';
 import { IProcessNode, ProcessNode } from './ProcessNode';
 
@@ -14,6 +14,9 @@ export class ApprovalProcessEngine {
 
   constructor(engine?: IApprovalProcessEngine) {
     this.process = new ProcessNode({
+      conditionNodes: [],
+      id: '',
+      props: void 0,
       engine: this,
       type: 'START',
       componentName: 'StartActivity',
@@ -41,6 +44,6 @@ export class ApprovalProcessEngine {
   }
 
   get addableActivityResources() {
-    return GlobalStore.getAddableActivityResources();
+    return getAddableActivityResources();
   }
 }

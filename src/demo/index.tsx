@@ -3,25 +3,27 @@
  * description: 支持 发起，审批，抄送，条件分支 节点类型。支持自定义节点类型。支持扩展节点属性。
  */
 
-import React, {useState} from 'react';
 import {
   ApprovalProcessDesigner,
-  GlobalStore,
   IProcessNode,
   ProcessWidget,
+  registerIcons,
   StudioPanel,
 } from 'approval-process-designer';
+import React, { useState } from 'react';
 import {
   ApprovalActivity,
+  CcActivity,
   ConditionActivity,
   RouteActivity,
   StartActivity,
-  CcActivity,
 } from './activities';
 import * as Icons from './activities/Icons';
 
 const Demo: React.FC = () => {
   const [data, setData] = useState<IProcessNode>({
+    engine: undefined,
+    conditionNodes: [],
     type: 'START',
     componentName: 'StartActivity',
     title: '发起人',
@@ -37,6 +39,8 @@ const Demo: React.FC = () => {
           type: 'CC',
           componentName: 'CcActivity',
           title: '抄送人',
+          conditionNodes: [],
+          props: {},
         },
         conditionNodes: [
           {
@@ -63,7 +67,7 @@ const Demo: React.FC = () => {
     setData(value);
   };
 
-  GlobalStore.registerIcons(Icons);
+  registerIcons(Icons);
 
   return (
     <ApprovalProcessDesigner value={data} onChange={handleOnChange}>
@@ -80,6 +84,6 @@ const Demo: React.FC = () => {
       </StudioPanel>
     </ApprovalProcessDesigner>
   );
-}
+};
 
 export default Demo;

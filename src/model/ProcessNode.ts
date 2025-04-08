@@ -1,7 +1,7 @@
 import { define, observable, observe, reaction } from '@formily/reactive';
+import { getConditionActivityResource } from 'approval-process-designer';
 import Chance from 'chance';
 import _ from 'lodash';
-import { GlobalStore } from '../store';
 import { ApprovalProcessEngine } from './ApprovalProcessEngine';
 
 const chance = new Chance();
@@ -15,70 +15,55 @@ export type ProcessNodeType =
   | 'END';
 
 export interface IProcessNode {
-  /**
-   * ApprovalProcessEngine实例
-   */
-  engine: ApprovalProcessEngine;
-  /**
-   * 节点唯一标识
-   */
-  id: string;
   type: ProcessNodeType;
-  componentName: string;
-  /**
-   * 条件节点
-   */
-  conditionNodes: (ProcessNode | undefined)[];
-  title: string;
-  props: any;
-  /**
-   * 默认条件
-   */
-  defaultCondition?: boolean;
-  description?: string;
-  nextNode?: IProcessNode;
+  engine?: ApprovalProcessEngine;
   isSourceNode?: boolean;
+  id?: string;
+  componentName?: string;
+  nextNode?: IProcessNode;
+  conditionNodes?: IProcessNode[];
+  title?: string;
+  description?: string;
+  props?: any;
+  defaultCondition?: boolean;
 }
 
 const ProcessNodes = new Map<string, ProcessNode>();
 
-export class ProcessNode implements IProcessNode {
-  componentName: string;
-  conditionNodes: (ProcessNode | undefined)[];
-  engine: ApprovalProcessEngine;
-  id: string;
-  props: any;
-  title: string;
-  type: ProcessNodeType;
-  defaultCondition?: boolean;
-  description?: string;
-  nextNode?: IProcessNode;
+export class ProcessNode {
+  engine?: ApprovalProcessEngine;
   isSourceNode?: boolean;
-  /**
-   * 上一个节点的id
-   */
+  id: string;
+  type: ProcessNodeType;
+  componentName: string;
   prevNodeId?: string;
+  nextNode: ProcessNode | null;
+  conditionNodes: ProcessNode[];
+  title?: string;
+  description?: string;
+  props: any;
+  defaultCondition?: boolean;
 
   constructor(node: IProcessNode, parentNode?: ProcessNode) {
-    this.engine = parentNode?.engine ?? node.engine;
+    this.engine = node.engine;
     this.isSourceNode = node.isSourceNode;
     this.id =
-      node.id ?? `Activity_${chance.string({ length: 10, alpha: true })}`;
+      node.id || `Activity_${chance.string({ length: 10, alpha: true })}`;
     this.type = node.type;
-    this.componentName = node.componentName;
+    this.componentName = node.componentName || node.type;
     this.prevNodeId = parentNode?.id;
+    this.nextNode = null;
     this.conditionNodes = [];
     this.title = node.title;
     this.description = node.description;
     this.props = node.props;
+    this.engine = parentNode?.engine;
     this.defaultCondition = node.defaultCondition;
 
-    /**
-     * 在每次添加节点时，将节点保存在全局变量中
-     * Map<string, ProcessNode>
-     */
     ProcessNodes.set(this.id, this);
-    this.from(node);
+    if (node) {
+      this.from(node);
+    }
     this.makeObservable();
   }
 
@@ -97,22 +82,22 @@ export class ProcessNode implements IProcessNode {
       () => {
         return (
           (this.prevNodeId ?? '') +
-          (this.title ?? '') +
-          (this.description ?? '') +
-          (this.nextNode?.id ?? '') +
-          (this.conditionNodes.length ?? 0)
+          this.title +
+          this.description +
+          this.nextNode?.id +
+          this.conditionNodes.length
         );
       },
       () => {
-        if (!this.isSourceNode) {
-          this.engine?.handleChange(`${this.id} something changed`);
+        if (!this.isSourceNode && this.engine) {
+          this.engine.handleChange();
         }
       },
     );
 
     observe(this.props, () => {
-      if (!this.isSourceNode) {
-        this.engine?.handleChange(`${this.id} props changed`);
+      if (!this.isSourceNode && this.engine) {
+        this.engine.handleChange();
       }
     });
   }
@@ -128,20 +113,19 @@ export class ProcessNode implements IProcessNode {
     this.nextNode = node;
   }
 
-  setConditionNodes(nodes: (ProcessNode | undefined)[]) {
+  setConditionNodes(nodes: ProcessNode[]) {
     if (_.isEmpty(nodes)) {
       return;
     }
     _.forEach(nodes, (node) => {
-      if (node instanceof ProcessNode) {
-        node.prevNodeId = this.id;
-      }
+      node.prevNodeId = this.id;
     });
     this.conditionNodes = nodes;
   }
 
-  from(node: IProcessNode) {
-    if (node.id !== this.id) {
+  from(node?: IProcessNode) {
+    if (!node) return;
+    if (node.id && node.id !== this.id) {
       ProcessNodes.delete(this.id);
       ProcessNodes.set(node.id, this);
       this.id = node.id;
@@ -150,8 +134,10 @@ export class ProcessNode implements IProcessNode {
     this.componentName = node.componentName || node.type;
     this.title = node.title;
     this.description = node.description;
-    this.props = node.props;
-    this.engine = node.engine;
+    this.props = node.props ?? {};
+    if (node.engine) {
+      this.engine = node.engine;
+    }
 
     if (node.nextNode) {
       this.nextNode = new ProcessNode(node.nextNode, this);
@@ -176,13 +162,13 @@ export class ProcessNode implements IProcessNode {
       parentNode,
     );
     if (this.type === 'ROUTE') {
-      const conditionResource = GlobalStore.getConditionActivityResource();
-      const firstCondition = conditionResource?.node?.clone(node);
-      const conditionDefault = conditionResource?.node?.clone(node);
-      if (conditionDefault instanceof ProcessNode) {
+      const conditionResource = getConditionActivityResource();
+      if (conditionResource && conditionResource.node) {
+        const firstCondition = conditionResource.node.clone(node);
+        const conditionDefault = conditionResource.node.clone(node);
         conditionDefault.defaultCondition = true;
+        node.setConditionNodes([firstCondition, conditionDefault]);
       }
-      node.setConditionNodes([firstCondition, conditionDefault]);
     }
     return node;
   }
@@ -200,10 +186,11 @@ export class ProcessNode implements IProcessNode {
     const parentNode = this.prevNodeId
       ? ProcessNodes.get(this.prevNodeId)
       : void 0;
-    if (parentNode) {
-      if (this.type === 'CONDITION') {
-        //当前节点是条件节点
-        const linkedIds = this.collectLinkIds();
+
+    if (this.type === 'CONDITION') {
+      //当前节点是条件节点
+      const linkedIds = this.collectLinkIds();
+      if (parentNode) {
         if (parentNode.conditionNodes.length > 2) {
           //当分支超过2个时，只需要删除当前节点，否则，清除整个路由节点
           parentNode.conditionNodes = _.filter(
@@ -227,28 +214,32 @@ export class ProcessNode implements IProcessNode {
               return conditionNode.id !== this.id;
             },
           );
-          const { deleteIds, startNode, endNode } =
-            this.processRaminRouteBranch(remainNode);
-          if (deleteIds) {
-            linkedIds.push(...deleteIds);
-          }
-          if (startNode) {
-            parentParentNode?.setNextNode(startNode);
-            endNode?.setNextNode(parentNodeNextNode);
-          } else {
-            parentParentNode?.setNextNode(parentNodeNextNode);
+          if (remainNode) {
+            const { deleteIds, startNode, endNode } =
+              this.processRaminRouteBranch(remainNode);
+            if (deleteIds) {
+              linkedIds.push(...deleteIds);
+            }
+            if (startNode) {
+              parentParentNode?.setNextNode(startNode);
+              endNode?.setNextNode(parentNodeNextNode);
+            } else {
+              parentParentNode?.setNextNode(parentNodeNextNode);
+            }
           }
         }
-        _.forEach(linkedIds, (id: string) => {
-          ProcessNodes.delete(id);
-        });
-      } else {
-        if (this.nextNode) {
-          this.nextNode.prevNodeId = this.prevNodeId;
-        }
-        parentNode.nextNode = this.nextNode;
-        ProcessNodes.delete(this.id);
       }
+      _.forEach(linkedIds, (id: string) => {
+        ProcessNodes.delete(id);
+      });
+    } else {
+      if (this.nextNode) {
+        this.nextNode.prevNodeId = this.prevNodeId;
+      }
+      if (parentNode) {
+        parentNode.nextNode = this.nextNode;
+      }
+      ProcessNodes.delete(this.id);
     }
   }
 
@@ -259,8 +250,7 @@ export class ProcessNode implements IProcessNode {
     if (this.type !== 'ROUTE') {
       return;
     }
-    const conditionActivity =
-      GlobalStore.getConditionActivityResource()?.node?.clone(this);
+    const conditionActivity = getConditionActivityResource()?.node?.clone(this);
     if (conditionActivity) {
       const newChildren = _.concat(
         this.conditionNodes.slice(0, this.conditionNodes.length - 1),
@@ -282,10 +272,8 @@ export class ProcessNode implements IProcessNode {
     }
     if (this.conditionNodes && this.conditionNodes.length > 0) {
       this.conditionNodes.forEach((child) => {
-        if (child) {
-          ids.push(child.id);
-          ids = ids.concat(child.collectLinkIds());
-        }
+        ids.push(child.id);
+        ids = ids.concat(child.collectLinkIds());
       });
     }
     return ids;
@@ -296,26 +284,26 @@ export class ProcessNode implements IProcessNode {
    * @param node
    */
   processRaminRouteBranch = (
-    node?: ProcessNode,
+    node: ProcessNode,
   ): {
     deleteIds?: string[];
-    startNode?: ProcessNode | null;
-    endNode?: ProcessNode | null;
+    startNode: ProcessNode | null;
+    endNode: ProcessNode | null;
   } => {
     const ids: string[] = [];
-    const getStartNode = (node?: null | ProcessNode) => {
+    const getStartNode = (node: ProcessNode) => {
       if (!node) {
         return null;
       }
-      let startNode = node;
-      while (startNode?.type === 'CONDITION' && startNode.nextNode) {
+      let startNode: ProcessNode | null = node;
+      while (startNode?.type === 'CONDITION') {
         ids.push(startNode.id);
         startNode = startNode.nextNode;
       }
       return startNode;
     };
 
-    const getEndNode = (node?: null | ProcessNode) => {
+    const getEndNode = (node: ProcessNode | null) => {
       if (!node) {
         return null;
       }
@@ -334,9 +322,11 @@ export class ProcessNode implements IProcessNode {
     };
   };
 
-  get index() {
-    if (this.type === 'CONDITION' && this.prevNodeId) {
-      const parentNode = ProcessNodes.get(this.prevNodeId);
+  get index(): number | null {
+    if (this.type === 'CONDITION') {
+      const parentNode: ProcessNode | undefined = this.prevNodeId
+        ? ProcessNodes.get(this.prevNodeId)
+        : void 0;
       if (parentNode) {
         return parentNode.conditionNodes?.indexOf(this) || 0;
       }
@@ -355,10 +345,9 @@ export class ProcessNode implements IProcessNode {
     if (this.type !== 'CONDITION') {
       return false;
     }
-    if (this.prevNodeId) {
-      const parentNode = ProcessNodes.get(this.prevNodeId);
-      return this.index === (parentNode?.conditionNodes?.length || 0) - 1;
-    }
-    return false;
+    const parentNode = this.prevNodeId
+      ? ProcessNodes.get(this.prevNodeId)
+      : void 0;
+    return this.index === (parentNode?.conditionNodes?.length || 0) - 1;
   }
 }

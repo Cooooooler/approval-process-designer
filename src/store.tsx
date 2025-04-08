@@ -7,7 +7,6 @@ export const DESIGNER_ICONS_STORE: { value: Record<string, JSX.Element> } = obse
 export const DESIGNER_RESOURCES_STORE: { value: Record<string, IResource> } = observable.ref({})
 
 
-export namespace GlobalStore {
   export function registerIcons(icons: {
     [key in 'ApprovalActivityIcon' | 'RouteActivityIcon' | 'CcActivityIcon']: JSX.Element
   }) {
@@ -19,7 +18,7 @@ export namespace GlobalStore {
   }
 
   export function registerActivityResources(activities: Record<string, ActivityFC<any>>) {
-    const resourceMap = {};
+    const resourceMap: Record<string, IResource | undefined> = {};
     _.forEach(activities, (activity: ActivityFC<any>, key: string) => {
       resourceMap[activity?.Resource?.componentName || key] = activity?.Resource
     })
@@ -45,4 +44,3 @@ export namespace GlobalStore {
       return resource?.type === 'CONDITION'
     })
   }
-}
