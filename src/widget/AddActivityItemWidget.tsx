@@ -39,12 +39,19 @@ export const AddActivityItemWidget: FC<ActivityCardWidgetProps> = ({
 }) => {
   const handleClick = () => {
     onClick?.(processNode);
-    const activity = getActivityResource(resource?.componentName);
-    processNode.setNextNode(activity?.node.clone(processNode));
+    const activity = resource.componentName
+      ? getActivityResource(resource?.componentName)
+      : void 0;
+    if (activity && activity.node) {
+      processNode.setNextNode(activity?.node.clone(processNode));
+    }
   };
   return (
     <ActivityCardWidgetStyled onClick={handleClick}>
-      <IconWidget className={`activity-icon`} icon={getIcon(resource?.icon)} />
+      <IconWidget
+        className={`activity-icon`}
+        icon={resource.icon ? getIcon(resource?.icon) : void 0}
+      />
       <div className={`title`}>{resource?.title}</div>
     </ActivityCardWidgetStyled>
   );

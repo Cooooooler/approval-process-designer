@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 import { registerActivityResources } from 'approval-process-designer';
-import React, { FC } from 'react';
+import React, { FC, useEffect } from 'react';
 import { EndActivity } from '../activity';
 import { ActivitiesContext } from '../context';
 import { useProcess } from '../hooks/useProcess';
@@ -20,7 +20,11 @@ type ProcessWidgetProps = {
 export const ProcessWidget: FC<ProcessWidgetProps> = ({ activities }) => {
   const processNode = useProcess();
 
-  registerActivityResources(activities);
+  useEffect(() => {
+    if (activities) {
+      registerActivityResources(activities);
+    }
+  }, [activities]);
 
   return (
     <ActivitiesContext.Provider value={activities}>

@@ -5,7 +5,7 @@ import {
   ApprovalActivity as TdApprovalActivity,
   createResource,
 } from 'approval-process-designer';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 export const ApprovalActivity: ActivityFC<IActivity> = ({ ...props }) => {
   const [form] = Form.useForm();

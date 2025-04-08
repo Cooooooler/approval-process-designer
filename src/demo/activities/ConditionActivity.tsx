@@ -5,7 +5,7 @@ import {
   ConditionActivity as TdConditionActivity,
   createResource,
 } from 'approval-process-designer';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 export const ConditionActivity: ActivityFC<IActivity> = ({ ...props }) => {
   const [open, setOpen] = useState(false);
