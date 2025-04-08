@@ -1,7 +1,9 @@
 import { define, observable } from '@formily/reactive';
+import {
+  getAddableActivityResources,
+  transformToSchema,
+} from 'approval-process-designer';
 import _ from 'lodash';
-import {getAddableActivityResources} from 'approval-process-designer';
-import { DesignerCore } from '../util';
 import { IProcessNode, ProcessNode } from './ProcessNode';
 
 interface IApprovalProcessEngine {
@@ -36,7 +38,7 @@ export class ApprovalProcessEngine {
   }
 
   handleChange = _.debounce(() => {
-    this.onChange?.(DesignerCore.transformToSchema(this.process));
+    this.onChange?.(transformToSchema(this.process));
   }, 0);
 
   setOnchange(fn: (value: any) => void) {

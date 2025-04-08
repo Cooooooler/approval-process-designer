@@ -1,10 +1,8 @@
 import {
     ActivityFC,
     CcActivity as TdCcActivity,
-    DesignerCore,
-    IActivity
+    IActivity,createResource
 } from "approval-process-designer";
-import createResource = DesignerCore.createResource;
 
 export const CcActivity: ActivityFC<IActivity> = TdCcActivity
 
